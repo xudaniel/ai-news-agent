@@ -61,7 +61,7 @@ try:
         sort_items_by_source_role as _sort_items_by_source_role,
     )
     from renderer import to_markdown
-    from top5 import EDITORIAL_RULES, evidence_fields
+    from top5 import EDITORIAL_RULES, evidence_fields, render_top5_email
 except ModuleNotFoundError:  # pragma: no cover - module execution fallback
     from .collector import CollectionStats, collect_items, collect_items_with_stats
     from .config import (
@@ -96,7 +96,7 @@ except ModuleNotFoundError:  # pragma: no cover - module execution fallback
         sort_items_by_source_role as _sort_items_by_source_role,
     )
     from .renderer import to_markdown
-    from .top5 import EDITORIAL_RULES, evidence_fields
+    from .top5 import EDITORIAL_RULES, evidence_fields, render_top5_email
 
 logger = logging.getLogger(__name__)
 _OPENAI_API_KEY_PLACEHOLDERS = {
@@ -1020,6 +1020,10 @@ def _apply_enrichment_response(
             item["why_it_matters"] = fields.get("why_it_matters", "")
             item["watchpoint"] = fields.get("watchpoint", "")
             item["event_date"] = fields.get("event_date", "未明确")
+            item["relevance"] = fields.get("relevance", "")
+            item["event_status"] = fields.get("event_status", "未明确")
+            item["previous_report_date"] = fields.get("previous_report_date", "")
+            item["what_changed"] = fields.get("what_changed", "")
         enriched_items.append(item)
 
     state["executive_summary"] = executive_summary
@@ -1144,6 +1148,10 @@ def _apply_structured_response(
                 keep_item["why_it_matters"] = fields.get("why_it_matters", "")
                 keep_item["watchpoint"] = fields.get("watchpoint", "")
                 keep_item["event_date"] = fields.get("event_date", "未明确")
+                keep_item["relevance"] = fields.get("relevance", "")
+                keep_item["event_status"] = fields.get("event_status", "未明确")
+                keep_item["previous_report_date"] = fields.get("previous_report_date", "")
+                keep_item["what_changed"] = fields.get("what_changed", "")
             kept_items.append(keep_item)
             used_ids.add(keep_id)
             used_ids.update(cluster_member_ids)
@@ -1195,6 +1203,8 @@ def apply_decisions_file(
     candidates_path: Path,
 ) -> DigestState:
     _NEWS_FILE.unlink(missing_ok=True)
+    if DIGEST_FORMAT == "top5-zh":
+        _NEWS_FILE.with_suffix(".html").unlink(missing_ok=True)
     snapshot_payload = json.loads(candidates_path.read_text(encoding="utf-8"))
     if not isinstance(snapshot_payload, dict):
         raise ValueError("Candidate snapshot must be a JSON object")
@@ -1480,6 +1490,9 @@ def node_categorize(state: DigestState) -> DigestState:
 
 def node_render(state: DigestState) -> DigestState:
     items = cast(list[ResolvedItem], state.get("items", []))
+    if DIGEST_FORMAT == "top5-zh":
+        _NEWS_FILE.unlink(missing_ok=True)
+        _NEWS_FILE.with_suffix(".html").unlink(missing_ok=True)
     logger.info("Rendering %d items", len(items))
     markdown = to_markdown(
         items,
@@ -1492,6 +1505,14 @@ def node_render(state: DigestState) -> DigestState:
             f"\n\n来源覆盖：{stats['feeds_succeeded']}/{stats['feeds_total']} 个订阅源读取成功；"
             f"{stats['feeds_failed']} 个源失败，本期覆盖不完整。\n"
         )
+    if DIGEST_FORMAT == "top5-zh":
+        email_html = render_top5_email(items, executive_summary=state.get("executive_summary", ""),
+                                      top_stories=state.get("top_stories", []))
+        if stats and stats["feeds_failed"]:
+            note = (f"<p>来源覆盖：{stats['feeds_succeeded']}/{stats['feeds_total']} 个订阅源读取成功；"
+                    f"{stats['feeds_failed']} 个源失败，本期覆盖不完整。</p>")
+            email_html = email_html.replace("</div></body>", note + "</div></body>")
+        _NEWS_FILE.with_suffix(".html").write_text(email_html, encoding="utf-8")
     _NEWS_FILE.write_text(markdown, encoding="utf-8")
     state["markdown"] = markdown
     return state

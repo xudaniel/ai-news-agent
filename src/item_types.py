@@ -48,6 +48,10 @@ class ResolvedItem(CollectedItem, total=False):
     why_it_matters: str
     watchpoint: str
     event_date: str
+    relevance: str
+    event_status: str
+    previous_report_date: str
+    what_changed: str
 
 
 class EnrichmentItem(TypedDict):

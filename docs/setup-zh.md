@@ -28,7 +28,7 @@ uv run python src/main.py --candidates-only
 uv run python src/main.py --apply-decisions digest-decisions.json
 ```
 
-候选快照保留上游的 `snapshot_id` 绑定和逐条 disposition 校验。中文所需四个字段写入每个保留 cluster，见 [编辑标准](editorial-policy.md)。执行顺序和错误处理沿用 [AGENTS.md](../AGENTS.md)。
+候选快照保留上游的 `snapshot_id` 绑定和逐条 disposition 校验。中文事实与阅读标签字段写入每个保留 cluster，见 [编辑标准](editorial-policy.md)。执行顺序和错误处理沿用 [AGENTS.md](../AGENTS.md)。成功后同时生成 `news.md` 和 `news.html`，可直接在浏览器打开 HTML 预览手机邮件。验证失败会清除旧版 Markdown 与 HTML。
 
 如需发布至 Issue，遵循 AGENTS.md 的身份预检查与 `--dispatch-publish` 路径；它需要已授权的本地 `gh` 或工作流派发权限的 token。连接在助手中的 GitHub 工具不等于本地命令已经有 GitHub token。
 

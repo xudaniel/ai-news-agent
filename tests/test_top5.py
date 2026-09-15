@@ -1,6 +1,7 @@
 """Chinese fork behavior, safe rendering and real decision-pipeline regression tests."""
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
@@ -37,7 +38,7 @@ def story(n):
         'facts': '供应商宣布产品上线，实际采用情况尚未披露。',
         'why_it_matters': '可能降低客户部署成本。',
         'watchpoint': '关注正式可用范围与客户部署数据。',
-        'event_date': '2026-09-15',
+        'event_date': '2026-09-15', 'relevance': '产品', 'event_status': '已上线',
     }
 
 
@@ -54,7 +55,7 @@ def test_only_five_stories_and_separate_facts_from_inference(chinese):
     items = [story(n) for n in range(1, 9)]
     ids = [item['_prompt_id'] for item in reversed(items)]
     body = renderer.to_markdown(items, top_stories=ids, executive_summary='本日重点是产品落地。')
-    assert body.count('\n## ') == 5
+    assert len(re.findall(r'^## [1-5]\.', body, re.M)) == 5
     assert body.index('测试科技事件8') < body.index('测试科技事件7')
     assert '测试科技事件1' not in body
     assert '发生了什么' in body and '为什么重要（推断）' in body and '观察点' in body
@@ -114,7 +115,7 @@ def test_decisions_propagate_evidence_through_complete_renderer(chinese, tmp_pat
         'groups': [{'group_id': 'g1', 'off_topic_ids': [], 'clusters': [{
             'keep_id': 'g1i1', 'duplicate_ids': [], 'category': 'Industry & Business',
             'short_title': '中文产品上线', 'tier': 'high',
-            **{k: candidate[k] for k in ('facts', 'why_it_matters', 'watchpoint', 'event_date')},
+            **{k: candidate[k] for k in ('facts', 'why_it_matters', 'watchpoint', 'event_date', 'relevance', 'event_status')},
         }]}],
     }
     decisions_file = tmp_path / 'decisions.json'
@@ -124,12 +125,14 @@ def test_decisions_propagate_evidence_through_complete_renderer(chinese, tmp_pat
     state = graph.apply_decisions_file(decisions_file, candidates)
     assert '中文产品上线' in state['markdown']
     assert candidate['watchpoint'] in output.read_text()
+    assert '30 秒速览' in output.with_suffix('.html').read_text()
     # Invalid later decisions must not leave a stale, publishable file behind.
     del decisions['groups'][0]['clusters'][0]['facts']
     decisions_file.write_text(json.dumps(decisions))
     with pytest.raises(ValueError, match='facts'):
         graph.apply_decisions_file(decisions_file, candidates)
     assert not output.exists()
+    assert not output.with_suffix('.html').exists()
 
 
 def test_beijing_midnight_rejects_previous_day(chinese, monkeypatch):
@@ -137,3 +140,69 @@ def test_beijing_midnight_rejects_previous_day(chinese, monkeypatch):
     monkeypatch.setattr(publisher, '_utcnow', lambda: datetime(2026, 9, 15, 16, tzinfo=timezone.utc))
     with pytest.raises(RuntimeError, match='date'):
         publisher._publication_date()
+
+
+def test_overview_status_and_daily_action_match_editorial_order(chinese):
+    items = [story(1), story(2)]
+    items[1]['watchpoint'] = '今天验证第二个产品的试用权限。'
+    body = renderer.to_markdown(items, top_stories=['g2i1', 'g1i1'])
+    overview, detail = body.split('## 1.', 1)
+    assert '30 秒速览' in overview
+    assert overview.index('测试科技事件2') < overview.index('测试科技事件1')
+    assert '产品 · 已上线' in overview
+    assert body.split('## 今日一个行动')[1].strip() == items[1]['watchpoint']
+
+
+@pytest.mark.parametrize('field,value', [
+    ('relevance', 'Investment'), ('event_status', 'GA'),
+    ('what_changed', 'New rollout'), ('executive_summary', 'English only'),
+])
+def test_new_user_visible_fields_reject_english_or_unknown_labels(chinese, field, value):
+    item = story(1)
+    kwargs = {}
+    if field == 'executive_summary':
+        kwargs[field] = value
+    else:
+        item[field] = value
+    if field == 'what_changed':
+        item['previous_report_date'] = '2026-09-14'
+    with pytest.raises(ValueError):
+        top5.render_top5_email([item], **kwargs)
+
+
+def test_continuity_requires_prior_date_and_material_delta(chinese):
+    item = story(1)
+    item['previous_report_date'] = '2026-09-14'
+    with pytest.raises(ValueError, match='together'):
+        renderer.to_markdown([item])
+    item['what_changed'] = '从邀请测试扩大到企业客户正式使用。'
+    assert '较 2026-09-14 新增' in renderer.to_markdown([item])
+    assert item['what_changed'] in top5.render_top5_email([item])
+    item['previous_report_date'] = '2026-09-15'
+    with pytest.raises(ValueError, match='precede'):
+        renderer.to_markdown([item])
+
+
+def test_missing_status_stays_unknown_instead_of_guessing(chinese):
+    item = story(1)
+    del item['event_status']
+    assert '产品 · 未明确' in top5.render_top5_email([item])
+    assert '首次报道' not in top5.render_top5_email([item])
+
+
+def test_html_escapes_sources_and_keeps_monochrome_mobile_layout(chinese):
+    item = story(1)
+    item['facts'] += '<img src=x onerror=alert(1)>'
+    item['source'] = '<script>官方</script>'
+    item['link'] = 'https://example.com/?a=1&b=2'
+    output = top5.render_top5_email([item])
+    assert '<script>' not in output and '<img src=x' not in output
+    assert '&lt;img' in output and 'a=1&amp;b=2' in output
+    assert 'width=device-width' in output and 'font:18px' in output
+    assert 'background:#ffffff' in output and 'color:#111111' in output
+    assert 'alt="欣远景投资"' in output
+    assert '今日一个行动' in output
+    assert '大字版' not in output and '石墨版' not in output
+    item['link'] = 'javascript:alert(1)'
+    with pytest.raises(ValueError, match='HTTP'):
+        top5.render_top5_email([item])

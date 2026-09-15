@@ -47,7 +47,7 @@
 - `off_topic_ids`
 
 ## Generated Files
-- Treat `digest-candidates.json`, `digest-decisions.json`, `digest-run-status.json`, `digest-issue-status.json`, and `news.md` as generated local artifacts.
+- Treat `digest-candidates.json`, `digest-decisions.json`, `digest-run-status.json`, `digest-issue-status.json`, `news.md`, and `news.html` as generated local artifacts.
 - Do not commit them unless explicitly asked.
 
 ## Troubleshooting
@@ -58,7 +58,12 @@
 - This fork targets `xudaniel/ai-news-agent`. Never publish to the upstream author's repository.
 - Defaults: `DIGEST_FORMAT=top5-zh`, `DIGEST_TIMEZONE=Asia/Shanghai`.
 - Read `docs/editorial-policy.md` before making daily editorial decisions. Each kept cluster
-  must include Chinese `facts`, `why_it_matters`, `watchpoint`, and `event_date` (or `未明确`).
+  must include Chinese `facts`, `why_it_matters`, `watchpoint`, `event_date` (or `未明确`),
+  `relevance` (`投资`/`产品`/`监管`) and a source-supported Chinese `event_status`.
+- Use `previous_report_date` with `what_changed` only when earlier coverage is supplied;
+  never invent history. Keep `executive_summary` to one Chinese sentence.
+- The Chinese renderer writes `news.md` and `news.html` with the same editorial content.
+  Do not send the preview or publish a second edition without authorization.
 - At most five independent events. The renderer omits the longer category list.
 - Existing direct Gmail delivery is an external scheduled task. This repo's optional Actions
   path publishes public GitHub Issues; do not claim it sends through Gmail directly.
