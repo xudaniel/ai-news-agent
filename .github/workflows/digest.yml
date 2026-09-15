@@ -1,4 +1,4 @@
-name: Daily AI News Digest
+name: 科技与AI Top 5
 
 concurrency:
   group: digest-publish-${{ github.repository }}
@@ -12,15 +12,22 @@ permissions:
 on:
   schedule:
     # The timezone removes DST drift; the preflight below handles delayed-run date boundaries.
-    - cron: "30 12 * * *"
-      timezone: "America/New_York"
+    - cron: "0 10 * * *"
+      timezone: "Asia/Shanghai"
   workflow_dispatch:
 
 jobs:
   digest:
+    # Existing Gmail task owns daily delivery. Enable this alternate Issue pipeline explicitly.
+    if: github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_DIGEST == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       PYTHONPATH: src
+      DIGEST_FORMAT: top5-zh
+      DIGEST_TIMEZONE: Asia/Shanghai
+      DIGEST_ISSUE_REPO: ${{ github.repository }}
+      DIGEST_ISSUE_TITLE_PREFIX: 科技与AI Top 5
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
       GITHUB_TOKEN: ${{ github.token }}
@@ -29,12 +36,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Freeze Eastern publication date
+      - name: Freeze Beijing publication date
         uses: actions/github-script@v7
         with:
           script: |
             const digestDate = new Date().toLocaleDateString('en-CA', {
-              timeZone: 'America/New_York'
+              timeZone: 'Asia/Shanghai'
             });
             core.exportVariable('DIGEST_DATE', digestDate);
 
@@ -44,10 +51,10 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Keep this aligned with src/publisher.py's America/New_York issue-date rule.
+            // Keep this aligned with src/publisher.py's Asia/Shanghai issue-date rule.
             const digestDate = value =>
               new Date(value).toLocaleDateString('en-CA', {
-                timeZone: 'America/New_York'
+                timeZone: 'Asia/Shanghai'
               });
             const today = process.env.DIGEST_DATE;
             const query = `

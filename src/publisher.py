@@ -18,6 +18,8 @@ from zoneinfo import ZoneInfo
 try:
     from config import (
         DIGEST_ACTIONS_REF,
+        DIGEST_FORMAT,
+        DIGEST_TIMEZONE,
         DIGEST_ISSUE_LABEL,
         DIGEST_ISSUE_REPO,
         DIGEST_ISSUE_TITLE_PREFIX,
@@ -28,6 +30,8 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - module execution fallback
     from .config import (
         DIGEST_ACTIONS_REF,
+        DIGEST_FORMAT,
+        DIGEST_TIMEZONE,
         DIGEST_ISSUE_LABEL,
         DIGEST_ISSUE_REPO,
         DIGEST_ISSUE_TITLE_PREFIX,
@@ -42,7 +46,7 @@ _MAX_TITLE_STORY_CHARS = 100
 _MONTH_ABBREVS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 _TOP_STORY_LINE_PATTERN = re.compile(r"^- \*\*\[(.+?)\]\(", re.MULTILINE)
 # Keep this aligned with the scheduled fallback preflight in .github/workflows/digest.yml.
-_DIGEST_TIME_ZONE = ZoneInfo("America/New_York")
+_DIGEST_TIME_ZONE = ZoneInfo(DIGEST_TIMEZONE)
 _OPEN_ISSUES_QUERY = """
 query($owner: String!, $repo: String!, $cursor: String) {
   repository(owner: $owner, name: $repo) {
@@ -170,11 +174,13 @@ def _publication_date(*, required: bool = False) -> date:
 
 def _require_current_digest_date(digest_date: date) -> None:
     if digest_date != _digest_now().date():
-        raise RuntimeError("Digest publication date is not today in America/New_York")
+        raise RuntimeError(f"Digest publication date is not today in {DIGEST_TIMEZONE}")
 
 
 def _today_title_base(digest_date: date | None = None) -> str:
     day = digest_date or _digest_now().date()
+    if DIGEST_FORMAT == "top5-zh":
+        return f"{DIGEST_ISSUE_TITLE_PREFIX}｜{day.isoformat()}"
     return f"{DIGEST_ISSUE_TITLE_PREFIX} - {_MONTH_ABBREVS[day.month - 1]} {day.day}"
 
 

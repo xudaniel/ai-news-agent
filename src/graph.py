@@ -34,6 +34,7 @@ try:
         COMPANY_NAMES,
         DEFAULT_CATEGORY,
         DIGEST_OUTPUT_FILE,
+        DIGEST_FORMAT,
         _ENV_FILE as CONFIG_ENV_FILE,
         MAX_ITEMS_PER_SOURCE,
         OPENAI_API_KEY as CONFIG_OPENAI_API_KEY,
@@ -60,6 +61,7 @@ try:
         sort_items_by_source_role as _sort_items_by_source_role,
     )
     from renderer import to_markdown
+    from top5 import EDITORIAL_RULES, evidence_fields
 except ModuleNotFoundError:  # pragma: no cover - module execution fallback
     from .collector import CollectionStats, collect_items, collect_items_with_stats
     from .config import (
@@ -67,6 +69,7 @@ except ModuleNotFoundError:  # pragma: no cover - module execution fallback
         COMPANY_NAMES,
         DEFAULT_CATEGORY,
         DIGEST_OUTPUT_FILE,
+        DIGEST_FORMAT,
         _ENV_FILE as CONFIG_ENV_FILE,
         MAX_ITEMS_PER_SOURCE,
         OPENAI_API_KEY as CONFIG_OPENAI_API_KEY,
@@ -93,6 +96,7 @@ except ModuleNotFoundError:  # pragma: no cover - module execution fallback
         sort_items_by_source_role as _sort_items_by_source_role,
     )
     from .renderer import to_markdown
+    from .top5 import EDITORIAL_RULES, evidence_fields
 
 logger = logging.getLogger(__name__)
 _OPENAI_API_KEY_PLACEHOLDERS = {
@@ -1010,6 +1014,12 @@ def _apply_enrichment_response(
         )
         raw_tier = str(response_item.get("tier", "normal")).strip().lower()
         item["tier"] = raw_tier if raw_tier in ("high", "normal") else "normal"
+        if DIGEST_FORMAT == "top5-zh":
+            fields = evidence_fields(response_item)
+            item["facts"] = fields.get("facts", "")
+            item["why_it_matters"] = fields.get("why_it_matters", "")
+            item["watchpoint"] = fields.get("watchpoint", "")
+            item["event_date"] = fields.get("event_date", "未明确")
         enriched_items.append(item)
 
     state["executive_summary"] = executive_summary
@@ -1128,6 +1138,12 @@ def _apply_structured_response(
                 [str(duplicate_item.get("source", "")) for duplicate_item in duplicate_items],
             )
 
+            if DIGEST_FORMAT == "top5-zh":
+                fields = evidence_fields(cluster)
+                keep_item["facts"] = fields.get("facts", "")
+                keep_item["why_it_matters"] = fields.get("why_it_matters", "")
+                keep_item["watchpoint"] = fields.get("watchpoint", "")
+                keep_item["event_date"] = fields.get("event_date", "未明确")
             kept_items.append(keep_item)
             used_ids.add(keep_id)
             used_ids.update(cluster_member_ids)
@@ -1380,6 +1396,8 @@ Input JSON:
 {enrichment_payload}
 """
 
+    if DIGEST_FORMAT == "top5-zh":
+        enrichment_prompt += "\n" + EDITORIAL_RULES
     enrichment_response = _extract_json_object(
         _chat_completion_text(client, enrichment_prompt)
     )
@@ -1432,6 +1450,8 @@ def node_categorize(state: DigestState) -> DigestState:
 
     api_key = _get_openai_api_key()
     if not api_key:
+        if DIGEST_FORMAT == "top5-zh":
+            raise RuntimeError("Chinese Top 5 requires OPENAI_API_KEY or validated --apply-decisions; no heuristic publication")
         logger.warning("No valid OPENAI_API_KEY found, using local duplicate resolution")
         return _finalize_local_categorization(
             state,
@@ -1466,6 +1486,12 @@ def node_render(state: DigestState) -> DigestState:
         executive_summary=state.get("executive_summary", ""),
         top_stories=state.get("top_stories", []),
     )
+    stats = state.get("collection_stats")
+    if DIGEST_FORMAT == "top5-zh" and stats and stats["feeds_failed"]:
+        markdown += (
+            f"\n\n来源覆盖：{stats['feeds_succeeded']}/{stats['feeds_total']} 个订阅源读取成功；"
+            f"{stats['feeds_failed']} 个源失败，本期覆盖不完整。\n"
+        )
     _NEWS_FILE.write_text(markdown, encoding="utf-8")
     state["markdown"] = markdown
     return state

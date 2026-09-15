@@ -3,13 +3,16 @@ Markdown renderer for ai-news-agent
 """
 import logging
 from collections import defaultdict
+from typing import cast
 
 try:
-    from config import CATEGORIES
+    from config import CATEGORIES, DIGEST_FORMAT
+    from top5 import render_top5
     from item_types import ResolvedItem
     from ranking import CATEGORY_ORDER as _CATEGORY_ORDER, render_sort_key as _render_sort_key
 except ModuleNotFoundError:  # pragma: no cover - module execution fallback
-    from .config import CATEGORIES
+    from .config import CATEGORIES, DIGEST_FORMAT
+    from .top5 import render_top5
     from .item_types import ResolvedItem
     from .ranking import CATEGORY_ORDER as _CATEGORY_ORDER, render_sort_key as _render_sort_key
 
@@ -31,6 +34,8 @@ def to_markdown(
     top_stories: list[str] | None = None,
 ) -> str:
     """Convert items to compact markdown, sorted by tier then recency within each category."""
+    if DIGEST_FORMAT == "top5-zh":
+        return cast(str, render_top5(items, executive_summary=executive_summary, top_stories=top_stories))
     if not items:
         return "_No fresh AI headlines in the last 24 h._"
 

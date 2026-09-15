@@ -1,39 +1,58 @@
-# Daily AI News Digest
+# 科技与 AI Top 5
 
-One short email a day with the AI news that matters — picked from 25+ trusted sources (TechCrunch, Wired, Ars Technica, The Verge, MIT Technology Review, OpenAI, Google, Meta, and more) and readable in two minutes.
+Daniel 的中文科技日报。优先 AI，每期最多五个独立事件，分别说明**发生了什么、为什么重要、接下来观察什么**，保留日期与原始来源链接。
 
-**[📬 Subscribe to the daily email](https://github.com/nickzren/ai-news-agent/subscription)** · **[📖 Read the latest digest](https://github.com/nickzren/ai-news-agent/issues?q=label%3A%22ai-digest%22)**
+基于 [nickzren/ai-news-agent](https://github.com/nickzren/ai-news-agent) 的 MIT 开源项目定制，保留原有采集、去重、候选快照绑定和发布检查。
 
-## How to subscribe (about 30 seconds)
+## 当前交付方式
 
-Delivery is handled by GitHub's built-in notifications — free, no newsletter service, no signup form, no ads. You just need a free [GitHub account](https://github.com/signup).
+| 项目 | 状态 |
+|---|---|
+| 中文 Top 5 代码 | 已配置，默认 `top5-zh` |
+| 日报时区 | `Asia/Shanghai`（北京时间） |
+| 现有直接 Gmail 日报 | 由独立的定时助手任务负责，每天 10:00 开始研究，完成后发送；不是本仓库执行 |
+| GitHub Actions 日报 | 已配置每天 10:00，**默认不自动生成**；需设置 `ENABLE_GITHUB_DIGEST=true` 才运行 |
+| 仓库独立生成 | 需自备有效 `OPENAI_API_KEY`；未执行真实模型调用或 GitHub 发布验收 |
+| 仓库邮件方式 | 发布 Issue 后通过 GitHub Watch 通知；**没有直接 Gmail/SMTP 发信功能** |
 
-1. Open the **[subscription page](https://github.com/nickzren/ai-news-agent/subscription)** — it's this repository's "Watch" menu.
-2. Choose **Custom**, tick **Issues**, and click **Apply**. Each digest is published here as a public daily post, and "Issues" is GitHub's name for those posts.
-3. Done — new digests arrive in your inbox each day.
+**无需为了现有 Gmail 日报再配置 API 密钥。** 如果之后切换到仓库独立运行，应先完成一次人工触发验收，再明确停用原任务，避免重复投递。GitHub Actions 是定时触发，不能保证邮件恰在 10:00 到达。
 
-Normally that's one email per day — the digest itself. To stop, open the same page and choose **Unwatch**. If nothing arrives, check that email is enabled in your [notification settings](https://github.com/settings/notifications).
+[仓库](https://github.com/xudaniel/ai-news-agent) · [配置步骤](docs/setup-zh.md) · [选题与写作要求](docs/editorial-policy.md) · [测试与限制](docs/verification.md)
 
-## How it works
+## 阅读格式
 
-Every day, an automated workflow reads the headlines published by the sources in [`feeds.json`](feeds.json), removes duplicates, groups related stories, and asks an AI model to pick the most important ones. The result goes up as a public daily post on this repository, and GitHub emails it to everyone watching.
+- 最多五条，按实际影响排序；不足五条如实说明。
+- 优先 AI，重大芯片、云计算、机器人、网络安全及科技商业事件也可入选。
+- 每条包含中文标题、事件日期、报道时间、事实、影响推断、观察点、来源。
+- 区分发布预告与正式上线、厂商主张与独立验证。
+- 普通 Markdown、白底黑字，适合手机阅读；不依赖复杂表格或大图。
 
-## FAQ
+仓库的模型路径使用 RSS 标题和摘要，并不自动打开每篇全文核验，因此正文会明确说明这个证据边界。现有定时助手任务另外进行网页检索和来源核验，也负责查找过去七天的邮件以避免跨日重复。**仓库自身目前只有当次事件去重与同日 Issue 检查，没有跨日语义新闻记忆。**
 
-- **Do I need to be technical?** No. If you can tick a checkbox, you can subscribe.
-- **Why GitHub instead of a newsletter?** There's no mailing list and no tracking — GitHub's own notification system delivers the email, and every past digest stays publicly readable.
-- **Who picks the stories?** An AI model ranks each day's headlines. The source list is public in [`feeds.json`](feeds.json), so you can see exactly where the news comes from.
-- **Can I suggest a source?** Yes — open an issue with the feed you'd like added.
+## 本地使用
 
-## For developers
+```bash
+uv sync --locked --extra dev
+uv run python src/main.py --candidates-only
+# 按 docs/editorial-policy.md 和 AGENTS.md 编写绑定快照的 digest-decisions.json
+uv run python src/main.py --apply-decisions digest-decisions.json
+```
 
-[![Daily AI News Digest](https://github.com/nickzren/ai-news-agent/actions/workflows/digest.yml/badge.svg)](https://github.com/nickzren/ai-news-agent/actions/workflows/digest.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+无需模型密钥即可导出候选或应用已经审核的决策。直接运行 `uv run python src/main.py` 才会调用模型；中文模式缺少密钥会停止，不会用英文标题列表冒充中文精选。
 
-- [docs/development.md](docs/development.md) — setup, agent-driven mode, feed configuration
-- [docs/architecture.md](docs/architecture.md) — pipeline diagrams and design notes
-- [AGENTS.md](AGENTS.md) — runbook for Codex / Claude Code automation
+独立 Issue 发布与 GitHub 身份配置见 [setup-zh.md](docs/setup-zh.md)。订阅入口：[Watch / Issues](https://github.com/xudaniel/ai-news-agent/subscription)。
+
+## 开发与兼容
+
+```bash
+uv run pytest -q
+uv run mypy src
+```
+
+原英文列表模式仍可使用：`DIGEST_FORMAT=headlines`。如需完整复现上游英文日期与标题，同时设置 `DIGEST_TIMEZONE=America/New_York` 和 `DIGEST_ISSUE_TITLE_PREFIX=AI Headlines`。已有英文回归测试显式启用此兼容模式，中文默认值另有独立进程测试。
+
+[开发说明](docs/development.md) · [架构](docs/architecture.md) · [自动化执行规范](AGENTS.md)
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE)。原作者版权与许可保持不变。

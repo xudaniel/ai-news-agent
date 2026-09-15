@@ -3,10 +3,10 @@
 from typing import Any
 
 try:
-    from config import CATEGORIES
+    from config import CATEGORIES, DIGEST_FORMAT
     from item_types import CollectedItem, FeedMode, ResolvedItem, SourceRole
 except ModuleNotFoundError:  # pragma: no cover - module execution fallback
-    from .config import CATEGORIES
+    from .config import CATEGORIES, DIGEST_FORMAT
     from .item_types import CollectedItem, FeedMode, ResolvedItem, SourceRole
 
 CATEGORY_ORDER = [*CATEGORIES, "Other"]
@@ -79,6 +79,7 @@ def sort_items_by_source_role(items: list[CollectedItem]) -> list[CollectedItem]
 
 
 def select_top_story_ids(items: list[ResolvedItem], requested_ids: list[str]) -> list[str]:
+    limit = 5 if DIGEST_FORMAT == "top5-zh" else 3
     prompt_id_lookup = {
         str(item.get("_prompt_id", "")).strip(): item
         for item in items
@@ -90,7 +91,7 @@ def select_top_story_ids(items: list[ResolvedItem], requested_ids: list[str]) ->
         if story_id in prompt_id_lookup and story_id not in selected_ids:
             selected_ids.append(story_id)
     if selected_ids:
-        return selected_ids[:3]
+        return selected_ids[:limit]
 
     ranked_items = sorted(prompt_id_lookup.values(), key=story_rank_key)
 
@@ -104,7 +105,7 @@ def select_top_story_ids(items: list[ResolvedItem], requested_ids: list[str]) ->
         diverse_ids.append(prompt_id)
         if category:
             seen_categories.add(category)
-        if len(diverse_ids) == 3:
+        if len(diverse_ids) == limit:
             return diverse_ids
 
     for item in ranked_items:
@@ -112,7 +113,7 @@ def select_top_story_ids(items: list[ResolvedItem], requested_ids: list[str]) ->
         if prompt_id in diverse_ids:
             continue
         diverse_ids.append(prompt_id)
-        if len(diverse_ids) == 3:
+        if len(diverse_ids) == limit:
             break
 
     return diverse_ids

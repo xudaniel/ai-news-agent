@@ -53,3 +53,14 @@
 ## Troubleshooting
 - If candidate export fails, inspect `digest-run-status.json` first.
 - Check `digest-run-status.json.feed_errors` first for sample feed failures before looking elsewhere.
+
+## Chinese Top 5 fork
+- This fork targets `xudaniel/ai-news-agent`. Never publish to the upstream author's repository.
+- Defaults: `DIGEST_FORMAT=top5-zh`, `DIGEST_TIMEZONE=Asia/Shanghai`.
+- Read `docs/editorial-policy.md` before making daily editorial decisions. Each kept cluster
+  must include Chinese `facts`, `why_it_matters`, `watchpoint`, and `event_date` (or `未明确`).
+- At most five independent events. The renderer omits the longer category list.
+- Existing direct Gmail delivery is an external scheduled task. This repo's optional Actions
+  path publishes public GitHub Issues; do not claim it sends through Gmail directly.
+- Do not enable `ENABLE_GITHUB_DIGEST` while the external task is sending the same digest
+  unless the user requests both. Never copy personal email addresses or credentials into Git.

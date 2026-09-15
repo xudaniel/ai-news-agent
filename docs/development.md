@@ -1,3 +1,8 @@
+> **Fork configuration:** this repository now defaults to Chinese Top 5 and Asia/Shanghai.
+> See [setup and delivery status](setup-zh.md). The upstream notes below describe the
+> legacy `DIGEST_FORMAT=headlines`, `DIGEST_TIMEZONE=America/New_York` mode; they do
+> not describe this fork's current schedule or direct Gmail delivery.
+
 # Development
 
 ## Prerequisites

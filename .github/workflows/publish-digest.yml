@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       digest_date:
-        description: Eastern publication date (YYYY-MM-DD)
+        description: Beijing publication date (YYYY-MM-DD)
         required: true
         type: string
       issue_title:
@@ -30,6 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: src
+      DIGEST_FORMAT: top5-zh
+      DIGEST_TIMEZONE: Asia/Shanghai
+      DIGEST_ISSUE_REPO: ${{ github.repository }}
+      DIGEST_ISSUE_TITLE_PREFIX: 科技与AI Top 5
       GITHUB_TOKEN: ${{ github.token }}
       DIGEST_OUTPUT_FILE: news.md
       DIGEST_DATE: ${{ inputs.digest_date }}

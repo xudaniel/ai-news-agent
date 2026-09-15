@@ -95,13 +95,13 @@ def test_receiver_requires_and_passes_the_dispatch_date_unchanged():
 @pytest.mark.parametrize(
     ("now", "expected_date"),
     [
-        ("2026-09-08T03:59:59Z", "2026-09-07"),
-        ("2026-09-08T04:00:00Z", "2026-09-08"),
-        ("2026-01-08T04:59:59Z", "2026-01-07"),
-        ("2026-01-08T05:00:00Z", "2026-01-08"),
+        ("2026-09-07T15:59:59Z", "2026-09-07"),
+        ("2026-09-07T16:00:00Z", "2026-09-08"),
+        ("2026-01-07T15:59:59Z", "2026-01-07"),
+        ("2026-01-07T16:00:00Z", "2026-01-08"),
     ],
 )
-def test_legacy_workflow_exports_one_eastern_date_before_preflight_and_build(
+def test_workflow_exports_one_beijing_date_before_preflight_and_build(
     now, expected_date
 ):
     steps = _workflow("digest.yml")["jobs"]["digest"]["steps"]
@@ -126,12 +126,12 @@ def test_legacy_preflight_uses_the_frozen_date_when_midnight_passes():
     preflight = next(step for step in steps if step.get("id") == "preflight")
     result = _run_scripts(
         [preflight["with"]["script"]],
-        now="2026-09-08T04:00:01Z",
+        now="2026-09-07T16:00:01Z",
         env={"DIGEST_DATE": "2026-09-07"},
         issues=[
             {
                 "number": 42,
-                "createdAt": "2026-09-07T16:00:00Z",
+                "createdAt": "2026-09-07T08:00:00Z",
                 "labels": {"nodes": [{"name": "ai-digest"}]},
             }
         ],
@@ -144,10 +144,17 @@ def test_publication_receiver_remains_manual_only():
     assert set(_triggers(_workflow("publish-digest.yml"))) == {"workflow_dispatch"}
 
 
-def test_legacy_ai_schedule_remains_1230_eastern():
+def test_fork_schedule_is_1000_beijing():
     triggers = _triggers(_workflow("digest.yml"))
 
     assert set(triggers) == {"schedule", "workflow_dispatch"}
     assert triggers["schedule"] == [
-        {"cron": "30 12 * * *", "timezone": "America/New_York"}
+        {"cron": "0 10 * * *", "timezone": "Asia/Shanghai"}
     ]
+
+
+def test_fork_schedule_is_opt_in_to_avoid_duplicate_delivery():
+    job = _workflow("digest.yml")["jobs"]["digest"]
+    assert job["if"] == "github.event_name == 'workflow_dispatch' || vars.ENABLE_GITHUB_DIGEST == 'true'"
+    assert job["env"]["DIGEST_TIMEZONE"] == "Asia/Shanghai"
+    assert job["env"]["DIGEST_ISSUE_REPO"] == "${{ github.repository }}"

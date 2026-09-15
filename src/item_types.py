@@ -44,6 +44,10 @@ class ResolvedItem(CollectedItem, total=False):
     summary_line: str
     tier: StoryTier
     coverage_sources: list[str]
+    facts: str
+    why_it_matters: str
+    watchpoint: str
+    event_date: str
 
 
 class EnrichmentItem(TypedDict):

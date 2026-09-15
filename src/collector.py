@@ -19,6 +19,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 try:
     from config import (
+        DIGEST_FORMAT,
         RSS_MAX_FEED_BYTES,
         RSS_MAX_WORKERS,
         RSS_TIMEOUT,
@@ -29,6 +30,7 @@ try:
     from ranking import normalize_feed_mode, normalize_source_role
 except ModuleNotFoundError:  # pragma: no cover - module execution fallback
     from .config import (
+        DIGEST_FORMAT,
         RSS_MAX_FEED_BYTES,
         RSS_MAX_WORKERS,
         RSS_TIMEOUT,
@@ -41,7 +43,7 @@ except ModuleNotFoundError:  # pragma: no cover - module execution fallback
 logger = logging.getLogger(__name__)
 
 _DAY = timedelta(days=1)
-_MAX_FUTURE_SKEW = timedelta(hours=1)
+_MAX_FUTURE_SKEW = timedelta(0) if DIGEST_FORMAT == "top5-zh" else timedelta(hours=1)
 
 # Location of feeds configuration file (project root)
 _FEEDS_FILE = Path(__file__).resolve().parent.parent / "feeds.json"

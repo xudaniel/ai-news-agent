@@ -137,5 +137,20 @@
     "source": "AIhub",
     "source_role": "commentary",
     "feed_mode": "discovery_only"
+  },
+  "https://blogs.nvidia.com/feed/": {
+    "category": "All",
+    "source": "NVIDIA Blog",
+    "source_role": "primary"
+  },
+  "https://techcrunch.com/feed/": {
+    "category": "All",
+    "source": "TechCrunch",
+    "source_role": "independent_reporting"
+  },
+  "https://feeds.arstechnica.com/arstechnica/index": {
+    "category": "All",
+    "source": "Ars Technica",
+    "source_role": "independent_reporting"
   }
 }
