@@ -242,26 +242,31 @@ def render_top5_print(
     day, summary, stories = _prepare(items, executive_summary, top_stories)
     e = html.escape
 
+    def fit(value: str, limit: int) -> str:
+        """Keep the fixed two-page view within its physical A4 page boxes."""
+        normalized = " ".join(value.split())
+        return normalized if len(normalized) <= limit else normalized[:limit - 1].rstrip() + "…"
+
     def story_block(number: int, s: dict[str, str]) -> str:
         delta = ""
         if s.get("previous_report_date"):
             delta = (f'<p><strong>较 {s["previous_report_date"]} 新增：</strong>'
-                     f'{e(s["what_changed"])}</p>')
+                     f'{e(fit(s["what_changed"], 55))}</p>')
         return (
             '<section class="story">'
-            f'<h2>{number}. {e(s["title"])}</h2>'
+            f'<h2>{number}. {e(fit(s["title"], 36))}</h2>'
             f'<p class="meta">{s["relevance"]} · {s["event_status"]} · '
             f'重要性{s["importance"]} · {s["impact_horizon"]}</p>'
-            f'<p><strong>发生了什么：</strong>{e(s["facts"])}</p>{delta}'
-            f'<p><strong>为什么重要（推断）：</strong>{e(s["why_it_matters"])}</p>'
-            f'<p><strong>谁受益／谁承压：</strong>{e(s["affected_parties"])}</p>'
-            f'<p><strong>后续验证指标：</strong>{e(s["tracking_metric"])}</p>'
-            f'<p class="source"><a href="{e(s["link"], quote=True)}">来源：{e(s["source"])}</a></p>'
+            f'<p><strong>发生了什么：</strong>{e(fit(s["facts"], 110))}</p>{delta}'
+            f'<p><strong>为什么重要（推断）：</strong>{e(fit(s["why_it_matters"], 70))}</p>'
+            f'<p><strong>谁受益／谁承压：</strong>{e(fit(s["affected_parties"], 55))}</p>'
+            f'<p><strong>后续验证指标：</strong>{e(fit(s["tracking_metric"], 45))}</p>'
+            f'<p class="source"><a href="{e(s["link"], quote=True)}">来源：{e(fit(s["source"], 22))}</a></p>'
             '</section>'
         )
 
     headlines = ''.join(
-        f'<li><strong>{s["relevance"]} · 重要性{s["importance"]}</strong>｜{e(s["title"])}</li>'
+        f'<li><strong>{s["relevance"]} · 重要性{s["importance"]} · {s["impact_horizon"]}</strong>｜{e(fit(s["title"], 36))}</li>'
         for s in stories
     ) or f'<p>{EMPTY_NOTE}</p>'
     first = ''.join(story_block(i, s) for i, s in enumerate(stories[:2], 1))
@@ -274,7 +279,7 @@ def render_top5_print(
 @page {{ size:A4; margin:12mm; }}
 * {{ box-sizing:border-box; }}
 body {{ margin:0; background:#fff; color:#111; font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif; }}
-.page {{ width:186mm; min-height:273mm; margin:0 auto; position:relative; padding:0 0 12mm; break-after:page; page-break-after:always; }}
+.page {{ width:186mm; height:273mm; overflow:hidden; margin:0 auto; position:relative; padding:0 0 12mm; break-after:page; page-break-after:always; }}
 .page:last-child {{ break-after:auto; page-break-after:auto; }}
 header {{ display:flex; align-items:flex-start; justify-content:space-between; border-bottom:1px solid #777; padding-bottom:5mm; margin-bottom:5mm; }}
 .logo {{ width:36mm; height:auto; }}
