@@ -52,6 +52,10 @@ class ResolvedItem(CollectedItem, total=False):
     event_status: str
     previous_report_date: str
     what_changed: str
+    importance: str
+    impact_horizon: str
+    affected_parties: str
+    tracking_metric: str
 
 
 class EnrichmentItem(TypedDict):

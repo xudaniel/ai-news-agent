@@ -39,6 +39,9 @@ def story(n):
         'why_it_matters': '可能降低客户部署成本。',
         'watchpoint': '关注正式可用范围与客户部署数据。',
         'event_date': '2026-09-15', 'relevance': '产品', 'event_status': '已上线',
+        'importance': '中', 'impact_horizon': '中期',
+        'affected_parties': '企业产品团队受益，缺乏工作流能力的通用工具承压。',
+        'tracking_metric': '跟踪三个月内付费客户数和任务完成率。',
     }
 
 
@@ -115,7 +118,9 @@ def test_decisions_propagate_evidence_through_complete_renderer(chinese, tmp_pat
         'groups': [{'group_id': 'g1', 'off_topic_ids': [], 'clusters': [{
             'keep_id': 'g1i1', 'duplicate_ids': [], 'category': 'Industry & Business',
             'short_title': '中文产品上线', 'tier': 'high',
-            **{k: candidate[k] for k in ('facts', 'why_it_matters', 'watchpoint', 'event_date', 'relevance', 'event_status')},
+            **{k: candidate[k] for k in ('facts', 'why_it_matters', 'watchpoint', 'event_date', 'relevance',
+                                          'event_status', 'importance', 'impact_horizon',
+                                          'affected_parties', 'tracking_metric')},
         }]}],
     }
     decisions_file = tmp_path / 'decisions.json'
@@ -150,7 +155,7 @@ def test_overview_status_and_daily_action_match_editorial_order(chinese):
     assert '30 秒速览' in overview
     assert overview.index('测试科技事件2') < overview.index('测试科技事件1')
     assert '产品 · 已上线' in overview
-    assert body.split('## 今日一个行动')[1].strip() == items[1]['watchpoint']
+    assert body.split('## 今日一个行动')[1].strip() == items[1]['tracking_metric']
 
 
 @pytest.mark.parametrize('field,value', [
@@ -206,3 +211,49 @@ def test_html_escapes_sources_and_keeps_monochrome_mobile_layout(chinese):
     item['link'] = 'javascript:alert(1)'
     with pytest.raises(ValueError, match='HTTP'):
         top5.render_top5_email([item])
+
+
+def test_priority_impact_and_tracking_fields_render_and_validate(chinese):
+    item = story(1)
+    output = top5.render_top5_email([item], executive_summary='业务软件竞争转向可验证的执行结果。')
+    assert '重要性中' in output and '中期' in output
+    assert '谁受益／谁承压' in output and item['affected_parties'] in output
+    assert '后续验证指标' in output and item['tracking_metric'] in output
+    assert '判断依据' in output
+    item['impact_horizon'] = '很快'
+    with pytest.raises(ValueError, match='impact_horizon'):
+        top5.render_top5_email([item])
+
+
+def test_two_page_print_layout_assigns_first_two_then_remaining(chinese):
+    items = [story(n) for n in range(1, 6)]
+    output = top5.render_top5_print(items, executive_summary='业务软件竞争转向可验证的执行结果。')
+    assert output.count('class="page"') == 2
+    first_page, second_page = output.split('<section class="page">')[1:]
+    assert '测试科技事件1' in first_page and '测试科技事件2' in first_page
+    assert '<h2>3. 测试科技事件3</h2>' not in first_page
+    assert '测试科技事件3' in second_page and '测试科技事件5' in second_page
+    assert '1 / 2' in first_page and '2 / 2' in second_page
+    assert 'break-inside:avoid' in output and '欣远景投资' in output
+    assert '产品 · 重要性中 · 中期' in first_page
+    assert 'height:273mm; overflow:hidden' in output
+
+
+def test_explicit_medium_importance_overrides_legacy_high_tier(chinese):
+    medium = story(1)
+    medium['tier'] = 'high'
+    high = story(2)
+    high['importance'] = '高'
+    assert ranking.select_top_story_ids([medium, high], [])[0] == 'g2i1'
+
+
+def test_print_view_bounds_long_fields_to_preserve_two_pages(chinese):
+    item = story(1)
+    item['facts'] = '很长的事实说明' * 40
+    item['why_it_matters'] = '很长的影响分析' * 30
+    item['affected_parties'] = '很长的利益相关方说明' * 20
+    item['tracking_metric'] = '很长的验证指标' * 20
+    output = top5.render_top5_print([item], executive_summary='业务软件竞争转向可验证的执行结果。')
+    assert output.count('class="page"') == 2
+    assert '…' in output
+    assert item['facts'] not in output
