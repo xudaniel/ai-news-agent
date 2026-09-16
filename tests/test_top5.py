@@ -235,3 +235,25 @@ def test_two_page_print_layout_assigns_first_two_then_remaining(chinese):
     assert '测试科技事件3' in second_page and '测试科技事件5' in second_page
     assert '1 / 2' in first_page and '2 / 2' in second_page
     assert 'break-inside:avoid' in output and '欣远景投资' in output
+    assert '产品 · 重要性中 · 中期' in first_page
+    assert 'height:273mm; overflow:hidden' in output
+
+
+def test_explicit_medium_importance_overrides_legacy_high_tier(chinese):
+    medium = story(1)
+    medium['tier'] = 'high'
+    high = story(2)
+    high['importance'] = '高'
+    assert ranking.select_top_story_ids([medium, high], [])[0] == 'g2i1'
+
+
+def test_print_view_bounds_long_fields_to_preserve_two_pages(chinese):
+    item = story(1)
+    item['facts'] = '很长的事实说明' * 40
+    item['why_it_matters'] = '很长的影响分析' * 30
+    item['affected_parties'] = '很长的利益相关方说明' * 20
+    item['tracking_metric'] = '很长的验证指标' * 20
+    output = top5.render_top5_print([item], executive_summary='业务软件竞争转向可验证的执行结果。')
+    assert output.count('class="page"') == 2
+    assert '…' in output
+    assert item['facts'] not in output
