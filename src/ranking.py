@@ -55,7 +55,7 @@ def group_item_sort_key(item: CollectedItem) -> tuple[float, float, float, str]:
 
 def story_rank_key(item: ResolvedItem) -> tuple[int, float, float, float, float, str]:
     return (
-        -(1 if item.get("tier") == "high" else 0),
+        -(1 if item.get("importance") == "高" or item.get("tier") == "high" else 0),
         -float(feed_mode_priority(item.get("feed_mode"))),
         -float(source_role_priority(item.get("source_role"))),
         -float(len(item.get("coverage_sources", []))),
