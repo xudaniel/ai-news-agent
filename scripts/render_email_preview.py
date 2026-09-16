@@ -16,10 +16,16 @@ items = [dict(s, _prompt_id=f'g{n}i1', id=s['link'],
          for n, s in enumerate(sample['stories'], 1)]
 body = top5.render_top5_email(items, executive_summary=sample['executive_summary'],
                              top_stories=[s['_prompt_id'] for s in items])
+print_body = top5.render_top5_print(items, executive_summary=sample['executive_summary'],
+                                   top_stories=[s['_prompt_id'] for s in items])
 # These examples demonstrate layout, not source publication timestamps or a new edition.
 body = body.replace(top5.EVIDENCE_NOTE,
                     '版式示例：采用2026年9月14日公开事件，不代表本次新增报道。')
 body = body.replace('报道时间：2026-09-14 20:00', '报道日期：2026-09-14')
 body = body.replace(top5.LOGO_URL, '../assets/branding/new-vision-investment-mono.png')
 (ROOT / 'docs/email-preview.html').write_text(body)
+(ROOT / 'docs/print-preview.html').write_text(
+    print_body.replace(top5.LOGO_URL, '../assets/branding/new-vision-investment-mono.png')
+)
 print(ROOT / 'docs/email-preview.html')
+print(ROOT / 'docs/print-preview.html')
