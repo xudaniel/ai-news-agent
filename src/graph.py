@@ -1510,21 +1510,22 @@ def node_render(state: DigestState) -> DigestState:
         top_stories=state.get("top_stories", []),
     )
     stats = state.get("collection_stats")
+    coverage_note = ""
     if DIGEST_FORMAT == "top5-zh" and stats and stats["feeds_failed"]:
-        markdown += (
-            f"\n\n来源覆盖：{stats['feeds_succeeded']}/{stats['feeds_total']} 个订阅源读取成功；"
-            f"{stats['feeds_failed']} 个源失败，本期覆盖不完整。\n"
+        coverage_note = (
+            f"来源覆盖：{stats['feeds_succeeded']}/{stats['feeds_total']} 个订阅源读取成功；"
+            f"{stats['feeds_failed']} 个源失败，本期覆盖不完整。"
         )
+        markdown += f"\n\n{coverage_note}\n"
     if DIGEST_FORMAT == "top5-zh":
         email_html = render_top5_email(items, executive_summary=state.get("executive_summary", ""),
                                       top_stories=state.get("top_stories", []))
-        if stats and stats["feeds_failed"]:
-            note = (f"<p>来源覆盖：{stats['feeds_succeeded']}/{stats['feeds_total']} 个订阅源读取成功；"
-                    f"{stats['feeds_failed']} 个源失败，本期覆盖不完整。</p>")
+        if coverage_note:
+            note = f"<p>{coverage_note}</p>"
             email_html = email_html.replace("</div></body>", note + "</div></body>")
         _NEWS_FILE.with_suffix(".html").write_text(email_html, encoding="utf-8")
         print_html = render_top5_print(items, executive_summary=state.get("executive_summary", ""),
-                                      top_stories=state.get("top_stories", []))
+                                      top_stories=state.get("top_stories", []), coverage_note=coverage_note)
         _NEWS_FILE.with_name(f"{_NEWS_FILE.stem}-print.html").write_text(print_html, encoding="utf-8")
     _NEWS_FILE.write_text(markdown, encoding="utf-8")
     state["markdown"] = markdown

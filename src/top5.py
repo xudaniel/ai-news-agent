@@ -236,7 +236,8 @@ def render_top5_email(
 
 
 def render_top5_print(
-    items: list[ResolvedItem], *, executive_summary: str = "", top_stories: list[str] | None = None
+    items: list[ResolvedItem], *, executive_summary: str = "", top_stories: list[str] | None = None,
+    coverage_note: str = "",
 ) -> str:
     """Two-page A4 print view used as the stable input for PDF generation."""
     day, summary, stories = _prepare(items, executive_summary, top_stories)
@@ -251,53 +252,59 @@ def render_top5_print(
         delta = ""
         if s.get("previous_report_date"):
             delta = (f'<p><strong>较 {s["previous_report_date"]} 新增：</strong>'
-                     f'{e(fit(s["what_changed"], 55))}</p>')
+                     f'{e(fit(s["what_changed"], 40))}</p>')
         return (
             '<section class="story">'
-            f'<h2>{number}. {e(fit(s["title"], 36))}</h2>'
+            f'<h2>{number}. {e(fit(s["title"], 28))}</h2>'
             f'<p class="meta">{s["relevance"]} · {s["event_status"]} · '
             f'重要性{s["importance"]} · {s["impact_horizon"]}</p>'
-            f'<p><strong>发生了什么：</strong>{e(fit(s["facts"], 110))}</p>{delta}'
-            f'<p><strong>为什么重要（推断）：</strong>{e(fit(s["why_it_matters"], 70))}</p>'
-            f'<p><strong>谁受益／谁承压：</strong>{e(fit(s["affected_parties"], 55))}</p>'
-            f'<p><strong>后续验证指标：</strong>{e(fit(s["tracking_metric"], 45))}</p>'
+            f'<p><strong>发生了什么：</strong>{e(fit(s["facts"], 85))}</p>{delta}'
+            f'<p><strong>为什么重要（推断）：</strong>{e(fit(s["why_it_matters"], 55))}</p>'
+            f'<p><strong>谁受益／谁承压：</strong>{e(fit(s["affected_parties"], 40))}</p>'
+            f'<p><strong>后续验证指标：</strong>{e(fit(s["tracking_metric"], 36))}</p>'
             f'<p class="source"><a href="{e(s["link"], quote=True)}">来源：{e(fit(s["source"], 22))}</a></p>'
             '</section>'
         )
 
     headlines = ''.join(
-        f'<li><strong>{s["relevance"]} · 重要性{s["importance"]} · {s["impact_horizon"]}</strong>｜{e(fit(s["title"], 36))}</li>'
+        f'<li><strong>{s["relevance"]} · 重要性{s["importance"]} · {s["impact_horizon"]}</strong>｜{e(fit(s["title"], 28))}</li>'
         for s in stories
     ) or f'<p>{EMPTY_NOTE}</p>'
     first = ''.join(story_block(i, s) for i, s in enumerate(stories[:2], 1))
     second = ''.join(story_block(i, s) for i, s in enumerate(stories[2:], 3))
-    action = e(stories[0]["tracking_metric"]) if stories else "本期无可执行的验证动作。"
+    # Bound every variable-length print field, including the titles inside evidence.
+    # Full prose remains available in the Markdown and mobile HTML editions.
+    print_summary = e(fit(summary, 60))
+    evidence_stories = [dict(s, title=fit(s["title"], 28)) for s in stories[:2]]
+    evidence = e(fit(_summary_evidence(evidence_stories), 140)) if stories else EMPTY_NOTE
+    action = e(fit(stories[0]["tracking_metric"], 36)) if stories else "本期无可执行的验证动作。"
+    coverage = f'<p class="coverage"><strong>{e(fit(coverage_note, 110))}</strong></p>' if coverage_note else ""
     return f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>科技与AI Top 5｜{day}｜两页打印版</title>
 <style>
 @page {{ size:A4; margin:12mm; }}
 * {{ box-sizing:border-box; }}
-body {{ margin:0; background:#fff; color:#111; font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif; }}
+body {{ margin:0; background:#fff; color:#111; overflow-wrap:anywhere; word-break:break-all; font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif; }}
 .page {{ width:186mm; height:273mm; overflow:hidden; margin:0 auto; position:relative; padding:0 0 12mm; break-after:page; page-break-after:always; }}
 .page:last-child {{ break-after:auto; page-break-after:auto; }}
-header {{ display:flex; align-items:flex-start; justify-content:space-between; border-bottom:1px solid #777; padding-bottom:5mm; margin-bottom:5mm; }}
+header {{ display:flex; align-items:flex-start; justify-content:space-between; border-bottom:1px solid #777; padding-bottom:4mm; margin-bottom:4mm; }}
 .logo {{ width:36mm; height:auto; }}
 h1 {{ font-size:22pt; margin:3mm 0 1mm; }} h2 {{ font-size:14pt; line-height:1.35; margin:0 0 2mm; }}
-p,li {{ font-size:10.4pt; line-height:1.55; margin:1.4mm 0; }}
-.thesis {{ font-size:13pt; line-height:1.55; margin:2mm 0; }}
-.evidence,.meta,.source,.date {{ font-size:9pt; }}
-.story {{ border-top:1px solid #aaa; padding-top:3.5mm; margin-top:3.5mm; break-inside:avoid; page-break-inside:avoid; }}
+p,li {{ font-size:10.4pt; line-height:1.4; margin:1mm 0; }}
+.thesis {{ font-size:13pt; line-height:1.4; margin:2mm 0; }}
+.evidence,.meta,.source,.date,.coverage {{ font-size:9pt; }}
+.story {{ border-top:1px solid #aaa; padding-top:2.5mm; margin-top:2.5mm; break-inside:avoid; page-break-inside:avoid; }}
 .source a {{ color:#111; text-decoration:underline; }}
 .footer {{ position:absolute; bottom:0; left:0; right:0; display:flex; justify-content:space-between; font-size:9pt; }}
 </style></head><body>
 <section class="page"><header><img class="logo" src="{LOGO_URL}" alt="欣远景投资"><span class="date">{day}</span></header>
-<h1>科技与AI Top 5</h1><h2>30 秒速览</h2>
-<p class="thesis"><strong>今日判断（推断）：</strong>{e(summary)}</p>
-<p class="evidence"><strong>判断依据：</strong>{e(_summary_evidence(stories)) if stories else EMPTY_NOTE}</p>
-<ol>{headlines}</ol>{first}<div class="footer"><span>欣远景投资｜公开来源研究</span><span>1 / 2</span></div></section>
+<h1>科技与AI Top 5</h1>{coverage}<h2>30 秒速览</h2>
+<p class="thesis"><strong>今日判断（推断）：</strong>{print_summary}</p>
+<p class="evidence"><strong>判断依据：</strong>{evidence}</p>
+<ol>{headlines}</ol>{first}<div class="footer"><span>欣远景投资｜打印节选，全文见 Markdown／手机版</span><span>1 / 2</span></div></section>
 <section class="page"><header><strong>科技与AI Top 5｜续页</strong><span class="date">{day}</span></header>{second}
-<section class="story"><h2>横向判断</h2><p>{e(summary) if summary else EMPTY_NOTE}</p></section>
+<section class="story"><h2>横向判断</h2><p>{print_summary if summary else EMPTY_NOTE}</p></section>
 <section class="story"><h2>今日一个行动</h2><p>{action}</p></section>
-<div class="footer"><span>欣远景投资｜公开来源研究</span><span>2 / 2</span></div></section>
+<div class="footer"><span>欣远景投资｜打印节选，全文见 Markdown／手机版</span><span>2 / 2</span></div></section>
 </body></html>'''

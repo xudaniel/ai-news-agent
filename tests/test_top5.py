@@ -257,3 +257,59 @@ def test_print_view_bounds_long_fields_to_preserve_two_pages(chinese):
     assert output.count('class="page"') == 2
     assert '…' in output
     assert item['facts'] not in output
+
+
+def test_print_bounds_summary_evidence_and_action_without_changing_full_views(chinese):
+    item = story(1)
+    item['title'] = '很长的新闻标题' * 100
+    item['tracking_metric'] = '可验证的客户采用指标' * 100
+    summary = '业务软件竞争转向可验证的执行结果' * 100 + '。'
+    output = top5.render_top5_print([item], executive_summary=summary)
+    assert summary not in output
+    assert item['title'] not in output
+    assert item['tracking_metric'] not in output
+    assert '今日一个行动' in output and '2 / 2' in output
+    assert '节选' in output
+    for render in (top5.render_top5, top5.render_top5_email):
+        full = render([item], executive_summary=summary)
+        assert summary in full and item['tracking_metric'] in full
+
+
+@pytest.mark.parametrize('count', [0, 1, 5])
+@pytest.mark.parametrize('failed', [0, 2])
+def test_coverage_warning_reaches_all_outputs(chinese, tmp_path, monkeypatch, count, failed):
+    output = tmp_path / 'news.md'
+    monkeypatch.setattr(graph, '_NEWS_FILE', output)
+    graph.node_render({
+        'items': [story(n) for n in range(1, count + 1)],
+        'collection_stats': {'feeds_total': 10, 'feeds_succeeded': 10 - failed,
+                             'feeds_failed': failed, 'feed_errors': [], 'items_collected': count},
+    })
+    note = '来源覆盖：8/10 个订阅源读取成功；2 个源失败，本期覆盖不完整。'
+    for path in (output, output.with_suffix('.html'), tmp_path / 'news-print.html'):
+        text = path.read_text()
+        assert (note in text) == bool(failed)
+    if failed:
+        first = (tmp_path / 'news-print.html').read_text().split('<section class="page">')[1]
+        assert note in first
+
+
+def test_missing_importance_uses_legacy_tier(chinese):
+    high = story(2)
+    del high['importance']
+    high['tier'] = 'high'
+    assert ranking.select_top_story_ids([story(1), high], [])[0] == 'g2i1'
+    assert '重要性高' in top5.render_top5_print([high])
+
+
+def test_checked_in_previews_match_generator(tmp_path):
+    import shutil
+
+    root = Path(__file__).resolve().parents[1]
+    for directory in ('src', 'scripts', 'docs/examples'):
+        shutil.copytree(root / directory, tmp_path / directory)
+    env = dict(os.environ, DIGEST_FORMAT='top5-zh', DIGEST_TIMEZONE='Asia/Shanghai')
+    subprocess.run([sys.executable, str(tmp_path / 'scripts/render_email_preview.py')],
+                   env=env, check=True)
+    for name in ('email-preview.html', 'print-preview.html'):
+        assert (tmp_path / 'docs' / name).read_bytes() == (root / 'docs' / name).read_bytes()
