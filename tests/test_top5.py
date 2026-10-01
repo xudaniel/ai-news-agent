@@ -205,7 +205,8 @@ def test_html_escapes_sources_and_keeps_monochrome_mobile_layout(chinese):
     assert '&lt;img' in output and 'a=1&amp;b=2' in output
     assert 'width=device-width' in output and 'font:18px' in output
     assert 'background:#ffffff' in output and 'color:#111111' in output
-    assert 'alt="欣远景投资"' in output
+    assert 'Daniel Xu' in output
+    assert '<img' not in output.replace('&lt;img', '')
     assert '今日一个行动' in output
     assert '大字版' not in output and '石墨版' not in output
     item['link'] = 'javascript:alert(1)'
@@ -234,7 +235,8 @@ def test_two_page_print_layout_assigns_first_two_then_remaining(chinese):
     assert '<h2>3. 测试科技事件3</h2>' not in first_page
     assert '测试科技事件3' in second_page and '测试科技事件5' in second_page
     assert '1 / 2' in first_page and '2 / 2' in second_page
-    assert 'break-inside:avoid' in output and '欣远景投资' in output
+    assert 'break-inside:avoid' in output and 'Daniel Xu' in output
+    assert '<img' not in output
     assert '产品 · 重要性中 · 中期' in first_page
     assert 'height:273mm; overflow:hidden' in output
 

@@ -22,10 +22,9 @@ print_body = top5.render_top5_print(items, executive_summary=sample['executive_s
 body = body.replace(top5.EVIDENCE_NOTE,
                     '版式示例：采用2026年9月14日公开事件，不代表本次新增报道。')
 body = body.replace('报道时间：2026-09-14 20:00', '报道日期：2026-09-14')
-body = body.replace(top5.LOGO_URL, '../assets/branding/new-vision-investment-mono.png')
 (ROOT / 'docs/email-preview.html').write_text(body)
 (ROOT / 'docs/print-preview.html').write_text(
-    print_body.replace(top5.LOGO_URL, '../assets/branding/new-vision-investment-mono.png')
+    print_body
 )
 print(ROOT / 'docs/email-preview.html')
 print(ROOT / 'docs/print-preview.html')

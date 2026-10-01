@@ -87,7 +87,7 @@ RELEVANCE_LABELS = {"投资", "产品", "监管"}
 EVENT_STATUSES = {"已上线", "测试中", "已宣布", "政策提案", "规则已生效", "研究发布", "交易完成", "未明确"}
 IMPORTANCE_LABELS = {"高", "中"}
 IMPACT_HORIZONS = {"短期", "中期", "长期"}
-LOGO_URL = "https://raw.githubusercontent.com/xudaniel/ai-news-agent/main/assets/branding/new-vision-investment-mono.png"
+BYLINE = "Daniel Xu"
 EVIDENCE_NOTE = "时间按北京时间；事件日期按来源标注。此仓库版本基于 RSS 标题与摘要，原文仍需另行核验。"
 EMPTY_NOTE = "本次来源中没有足够的新条目；这不代表当天科技界没有新闻。"
 
@@ -166,7 +166,7 @@ def render_top5(
     items: list[ResolvedItem], *, executive_summary: str = "", top_stories: list[str] | None = None
 ) -> str:
     day, summary, stories = _prepare(items, executive_summary, top_stories)
-    lines = [f"![欣远景投资]({LOGO_URL})", "", f"# 科技与AI Top 5｜{day}", ""]
+    lines = [BYLINE, "", f"# 科技与AI Top 5｜{day}", ""]
     if not stories:
         return "\n".join(lines + [EMPTY_NOTE, ""])
     lines += ["## 30 秒速览", "", f"**今日判断（推断）：** {_text(summary)}", "",
@@ -198,7 +198,7 @@ def render_top5_email(
     """Mobile email preview. No send, tracking, scripts, or private mailbox access."""
     day, summary, stories = _prepare(items, executive_summary, top_stories)
     e = html.escape
-    body = [f'<img src="{LOGO_URL}" width="190" alt="欣远景投资" style="display:block;width:190px;max-width:100%;height:auto;margin-bottom:18px;">',
+    body = [f'<div style="font-size:18px;font-weight:700;margin-bottom:18px;">{BYLINE}</div>',
             f'<h1 style="font-size:26px;line-height:1.4;margin:0 0 20px;">科技与AI Top 5｜{day}</h1>']
     if not stories:
         body += [f'<p>{EMPTY_NOTE}</p>']
@@ -289,7 +289,7 @@ body {{ margin:0; background:#fff; color:#111; overflow-wrap:anywhere; word-brea
 .page {{ width:186mm; height:273mm; overflow:hidden; margin:0 auto; position:relative; padding:0 0 12mm; break-after:page; page-break-after:always; }}
 .page:last-child {{ break-after:auto; page-break-after:auto; }}
 header {{ display:flex; align-items:flex-start; justify-content:space-between; border-bottom:1px solid #777; padding-bottom:4mm; margin-bottom:4mm; }}
-.logo {{ width:36mm; height:auto; }}
+.byline {{ font-size:12pt; font-weight:700; }}
 h1 {{ font-size:22pt; margin:3mm 0 1mm; }} h2 {{ font-size:14pt; line-height:1.35; margin:0 0 2mm; }}
 p,li {{ font-size:10.4pt; line-height:1.4; margin:1mm 0; }}
 .thesis {{ font-size:13pt; line-height:1.4; margin:2mm 0; }}
@@ -298,13 +298,13 @@ p,li {{ font-size:10.4pt; line-height:1.4; margin:1mm 0; }}
 .source a {{ color:#111; text-decoration:underline; }}
 .footer {{ position:absolute; bottom:0; left:0; right:0; display:flex; justify-content:space-between; font-size:9pt; }}
 </style></head><body>
-<section class="page"><header><img class="logo" src="{LOGO_URL}" alt="欣远景投资"><span class="date">{day}</span></header>
+<section class="page"><header><span class="byline">{BYLINE}</span><span class="date">{day}</span></header>
 <h1>科技与AI Top 5</h1>{coverage}<h2>30 秒速览</h2>
 <p class="thesis"><strong>今日判断（推断）：</strong>{print_summary}</p>
 <p class="evidence"><strong>判断依据：</strong>{evidence}</p>
-<ol>{headlines}</ol>{first}<div class="footer"><span>欣远景投资｜打印节选，全文见 Markdown／手机版</span><span>1 / 2</span></div></section>
+<ol>{headlines}</ol>{first}<div class="footer"><span>{BYLINE}｜打印节选，全文见 Markdown／手机版</span><span>1 / 2</span></div></section>
 <section class="page"><header><strong>科技与AI Top 5｜续页</strong><span class="date">{day}</span></header>{second}
 <section class="story"><h2>横向判断</h2><p>{print_summary if summary else EMPTY_NOTE}</p></section>
 <section class="story"><h2>今日一个行动</h2><p>{action}</p></section>
-<div class="footer"><span>欣远景投资｜打印节选，全文见 Markdown／手机版</span><span>2 / 2</span></div></section>
+<div class="footer"><span>{BYLINE}｜打印节选，全文见 Markdown／手机版</span><span>2 / 2</span></div></section>
 </body></html>'''

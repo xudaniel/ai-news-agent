@@ -44,12 +44,6 @@ def test_two_physical_pages_with_visible_content(browser, chinese, case, tmp_pat
         markup = (root / 'docs/print-preview.html').read_text()
     else:
         markup = top5.render_top5_print(items, executive_summary=summary, coverage_note=warning)
-    # Use the real logo without relying on public network availability.
-    import base64
-    logo = 'data:image/png;base64,' + base64.b64encode(
-        (root / 'assets/branding/new-vision-investment-mono.png').read_bytes()).decode()
-    markup = markup.replace(top5.LOGO_URL, logo).replace(
-        '../assets/branding/new-vision-investment-mono.png', logo)
     page = browser.new_page()
     try:
         page.route('https://**/*', lambda route: route.abort())
